@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "name": "prisma-optimistic-concurrency-control-pattern-conflict-repro",
+  "version": "0.0.0",
+  "scripts": {
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^2.21.2",
+    "bcrypt": "^5.0.1",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "jest": "^26.6.3",
+    "prisma": "^2.21.2"
+  }
+}

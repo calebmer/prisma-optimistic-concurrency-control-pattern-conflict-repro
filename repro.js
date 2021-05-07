@@ -74,10 +74,13 @@ async function generateTestAccount() {
 }
 
 async function attemptOneTimePasswordLogin(account, oneTimePassword) {
-  // Check if the account is locked.
-  if (account.failedOneTimePasswordLoginAttempts >= 5) {
-    return "AccountLocked";
-  }
+  // account.failedOneTimePasswordLoginAttempts might contain outdated
+  // information because
+  //
+  // // Check if the account is locked.
+  // if (account.failedOneTimePasswordLoginAttempts >= 5) {
+  //   return "AccountLocked";
+  // }
 
   // Normally we use bcrypt to decrypt a 6 digit password. To simplify the test
   // case, compare in plain text to a constant.
@@ -93,32 +96,22 @@ async function attemptOneTimePasswordLogin(account, oneTimePassword) {
     }
 
     if (!isCorrectOneTimePassword) {
-      const updateAccountResult = await prisma.account.updateMany({
+      const updateAccountResult = await prisma.account.update({
         where: {
           id: account.id,
-          // Include `failedOneTimePasswordLoginAttempts` in our `where` clause
-          // because if it changed concurrently then the account may actually
-          // be locked so we’ll want to skip the update.
-          failedOneTimePasswordLoginAttempts:
-            account.failedOneTimePasswordLoginAttempts,
         },
         data: {
           // Safe to not use the atomic `increment` operator because we won’t
           // update `failedOneTimePasswordLoginAttempts` if it has changed
           // concurrently (see `where` clause).
-          failedOneTimePasswordLoginAttempts:
-            account.failedOneTimePasswordLoginAttempts + 1,
+          failedOneTimePasswordLoginAttempts: {
+            increment: 1,
+          },
         },
       });
-
-      // If the update failed because `failedOneTimePasswordLoginAttempts` was
-      // updated concurrently then refetch `account` and retry.
-      if (updateAccountResult.count === 0) {
-        account = await prisma.account.findUnique({
-          where: { id: account.id },
-          rejectOnNotFound: true,
-        });
-        return updateAccount(account);
+      //
+      if (updateAccountResult.failedOneTimePasswordLoginAttempts > 5) {
+        return "AccountLocked";
       }
 
       return "IncorrectOneTimePassword";
